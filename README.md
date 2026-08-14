@@ -3,6 +3,7 @@
 **Config ID:** `STAGE0_V3_PROJECTED_CURVATURE_SECOND_ORDER_READONLY_V1`
 **Status:** `COMPLETE`
 **Classification:** `PARTIALLY_EXPLAINED`
+**Follow-up diagnostic:** `RANK1_FACE_GEOMETRY_CONFIRMED_DRIFT_LINK_NOT_ROBUST`
 **Source support solves:** 38 &nbsp;·&nbsp; **New solver runs:** 0
 
 ---
@@ -30,6 +31,16 @@ rho = 1 / (4 * kappa_sigma) = 47.34582205692646
 **What is not explained.** The 90-degree result lands within `+0.44108%` (in fitted quadratic coefficient) of the same base scale only after a large cross-ell cancellation among the ell=0, ell=2, and ell=4 groups. That cancellation is measured with high precision, but no identity was found in the saved artifacts that *forces* it. The saved solve records contain no conic dual multipliers, and the previously tested full-complement map is infeasible, so an exact full-feasible-set involution could not be established.
 
 Hence the overall classification is `PARTIALLY_EXPLAINED`: a structurally derived base scale plus an isolated, quantified, unexplained upper-cap residual.
+
+Subsequent adversarial read-only analyses sharpened the unresolved side without changing that classification. The 90-degree correction is confined to a narrow, nearly zero-sum cross-ell direction close to `(1,-2,1)`, but its small in-plane drift is not robustly attributable to a fixed active-block pair or even to a face-level demand coordinate across all admissible drift definitions. The strongest surviving follow-up result is therefore geometric rather than causal:
+
+```text
+90-degree correction: narrow near-zero-sum cross-ell direction
+ell=0 face demand:     extremely stable rank-1 redistribution mode
+link between the two:  suggestive in ranks, not robust across definitions
+```
+
+The preregistered read-only stopping rule was reached. The saved primal artifacts identify the geometry but do not determine why the optimizer selects it; resolving that question would require a new experiment that records dual/KKT information. Section 6 gives the complete audit trail.
 
 ![Projected curvature decomposition: universal scale versus fits, the 90-degree cross-ell cancellation, and the 90-degree active-constraint demand ranking](projected_curvature_decomposition.png)
 
@@ -231,13 +242,163 @@ It is **not a proof**. No exact identity over the full feasible set was found th
 
 ---
 
-## 6. Disk-level and active-constraint findings
+## 6. Follow-up audit of the 90-degree near-null geometry
+
+All analyses in this section reuse the same 38 saved primal solves. They perform no additional support solve, parameter refinement, or optimizer run. Each inferential step was placed in a separate output package, and the later adversarial audits govern the interpretation of the earlier exploratory candidate.
+
+### 6.1 The cancellation selects a narrow near-zero-sum direction
+
+For each of the five stable differencing widths, define the actual-minus-universal group response
+
+```text
+Delta(h) = (Delta_ell0, Delta_ell2, Delta_ell4).
+```
+
+At the representative width, the components are
+
+```text
+(+41.57040684854174, -77.65338328346150, +36.33058445334078),
+```
+
+with cancellation fraction `0.9984082220825929`. Across the full five-width stable window:
+
+| Diagnostic | Saved result |
+| --- | ---: |
+| Cancellation fraction | `0.9974076450485962` to `0.9993025274414703` |
+| Minimum cosine to `(1,-2,1)` | `0.9989309387181827` |
+| Maximum angle to `(1,-2,1)` | `2.6495836119518867` degrees |
+| Three-group leading uncentered energy fraction | `0.999958236968428` |
+
+A blind PCA constrained only to the zero-sum plane returns
+
+```text
+d_zero = (+0.4337285565, -0.8159549679, +0.3822264114),
+```
+
+which is `2.0870314575` degrees from normalized `(1,-2,1)` and captures `0.9999623707345359` of the zero-sum projection energy. The 270-degree representative control has three small same-sign deviations and zero cancellation, so this near-null geometry is specific to the 90-degree route within the saved data.
+
+This establishes a narrow empirical direction, not an exact stencil law. Writing the zero-sum component in the orthogonal basis
+
+```text
+s = (1,-2,1),  a = (1,0,-1),  n = (1,1,1),
+```
+
+shows that the best aggregate direction can be written approximately as
+
+```text
+d_star proportional to (1.0631164788, -2, 0.9368835212).
+```
+
+However, the fitted in-plane coefficient ratio `lambda = B/A` varies from `0.0511741` to `0.0800424`; its maximum relative deviation from the aggregate value is `0.2681688852`. The strict fixed-`lambda` hypothesis therefore fails even though the zero-sum plane and narrow cone are confirmed.
+
+### 6.2 A provisional active-demand association
+
+The direction was decomposed as
+
+```text
+Delta(h) = alpha(h) d_zero + eta(h) d_perp + epsilon(h) n,
+r_eta = eta/alpha,  r_epsilon = epsilon/alpha.
+```
+
+An initial preregistered comparison separated the in-plane drift from observable leakage:
+
+| Five-scale diagnostic | Normalized LOOCV SSE |
+| --- | ---: |
+| `r_eta ~ h^2` | `4.940203292987409` |
+| `r_eta ~ p_D` for fixed blocks `(0,29)` and `(0,24)` | `0.2894104030993035` |
+| 270-degree `r_eta ~ p_D` control | `5.6489178654789525` |
+| 90-degree `r_epsilon ~ h^2` | `0.07879180758138568` |
+| 90-degree `r_epsilon ~ p_D` | `2.2969901737346796` |
+
+Here `p_D` is a normalized quadratic-demand balance constructed from the odd first response. The fixed pair carries between `95.71%` and `95.94%` of the active demand over these widths, and the original `r_eta` association has absolute Spearman correlation `0.90`. This justified the provisional label `ACTIVE_DEMAND_CANDIDATE`, but not a causal or KKT interpretation.
+
+### 6.3 Adversarial audit rejects the pair-specific mechanism
+
+The candidate was then tested without changing or reselecting the fixed pair.
+
+| Audit component | Result |
+| --- | --- |
+| Exact five-point permutation | `2/120 = 0.0166667`; PASS |
+| Leave-one-scale-out | slope sign `5/5`, absolute Spearman at least `0.8` in `5/5`, demand beats width in `4/5`; PASS |
+| Algebraic self-coupling robustness | frozen baseline tail `8/120`, but raw-even direction reverses slope and ranks `119/120`; FAIL |
+| All active ell=0 competitor pairs | canonical pair ranks `4/6`; all `6/6` pairs lie within 10% of its LOOCV statistic |
+
+The canonical pair was never replaced by a better-looking competitor. The correct adversarial decision is
+
+```text
+DOES_NOT_SURVIVE
+ELL0_FACE_LEVEL_NOT_PAIR_SPECIFIC
+```
+
+The failure does not show that the shared odd-response term mechanically manufactures the association: that universal shared term alone has exact tail `99/120 = 0.825`, while the unratioed raw-even `eta` retains the original sign with tail `8/120 = 0.0666667`. It shows instead that the claimed *direction-level, pair-specific* mechanism is not robust.
+
+### 6.4 Regression-free face geometry
+
+The four center-boundary ell=0 blocks were next treated as a single normalized demand vector
+
+```text
+p(h) = (p_11, p_12, p_24, p_29),  sum_i p_i = 1,
+```
+
+with no regression of drift on face coordinates. Centered PCA gives:
+
+| Geometry diagnostic | 90 degrees |
+| --- | ---: |
+| PC1 centered energy fraction | `0.9999736204908275` |
+| Minimum four-point training PC1 fraction | `0.999977311449773` |
+| Maximum leave-one-scale-out PC1 angle | `0.5321827389967885` degrees |
+| Mean face proportions `(s11,s12,s24,s29)` | `(0.0240076, 0.0158375, 0.2631050, 0.6970499)` |
+| Oriented PC1 loadings | `(-0.3235915, -0.2704150, -0.2712143, +0.8652208)` |
+
+Thus the face-demand variation is genuinely rank-1, but its mode is predominantly `s29` against the pooled other three blocks rather than a special `s29-s24` exchange. This also explains why all six pairwise demand coordinates performed similarly in the competitor scan.
+
+For each held-out width, the PCA direction and mean were estimated from the other four widths only. The resulting cross-fitted score was compared with four drift definitions using ranks and signs, without fitting a regression line:
+
+| Drift definition | Spearman with cross-fitted face score | Positive centered-sign matches | Preregistered relation |
+| --- | ---: | ---: | --- |
+| Original `r_eta` | `0.90` | `3/5` | FAIL |
+| Frozen-baseline `r_eta` | `0.80` | `5/5` | PASS |
+| Raw-even `eta` | `0.80` | `5/5` | PASS |
+| Raw-even `eta/alpha` | `-0.30` | `4/5` | FAIL |
+
+The original rank ordering is uncommon under the 120 scale assignments (`5/120 = 0.0416667` one-sided), but it fails the preregistered all-five sign condition. The varying positive denominator `alpha` reverses `6/10` pairwise raw-`eta` orderings. This documents normalization sensitivity; it does not prove that `alpha` is a nuisance or that the reversal is an artifact.
+
+The matched four-coordinate 270-degree control is also strongly rank-1 (`0.9975978110332967` PC1 fraction), as is the native 29-block ell=0 face (`0.9963579652925423`). Rank-1 demand variation alone is therefore not a 90-degree-specific signature. What does not reproduce at 270 degrees is the original drift correspondence: matched-coordinate Spearman is `-0.60` with only `2/5` positive centered-sign matches.
+
+### 6.5 Final follow-up classification and stopping point
+
+The follow-up evidence separates a firm geometric result from an unsupported mechanism claim:
+
+```text
+RANK1_FACE_GEOMETRY_CONFIRMED_DRIFT_LINK_NOT_ROBUST
+FACE_LEVEL_NOT_SUPPORTED
+```
+
+The narrow 90-degree near-zero-sum direction, the small observable leakage, and the rank-1 ell=0 face redistribution are reproducible facts about the saved five-scale window. The identity of the optimizer-level mechanism selecting that direction is not recoverable robustly from the saved primal responses. Under the preregistered stopping rule, the read-only mechanism search ends here. A further causal test would require new solves that save conic dual multipliers, slacks, and active-threshold information, with its decision rule sealed before execution.
+
+The exact permutation fractions above describe only the ordering of five saved scales. They are not population p-values and do not authorize causal, KKT, dual, continuum, or intervention claims.
+
+### 6.6 Authoritative follow-up artifacts
+
+| Stage | Authoritative result | Role |
+| --- | --- | --- |
+| Near-null identification | `near_null_result.json` | Identifies the narrow projected direction and rejects a simple active-disk column-dependence explanation |
+| Fixed-direction validation | `fixed_direction_result.json` | Confirms the zero-sum plane; rejects strict offset-independent `lambda` |
+| Initial drift separation | `drift_origin_result.json` | Records the provisional `ACTIVE_DEMAND_CANDIDATE` |
+| Adversarial candidate audit | `adversarial_audit_result.json` | Governing rejection of pair specificity and strict self-coupling robustness |
+| Regression-free face geometry | `face_geometry_result.json` | Governing final classification and read-only stopping decision |
+
+Every stage has its own scope, provenance record, preflight record, and SHA-256 manifest. Later negative audits narrow the claims of earlier exploratory stages; they do not retroactively alter the saved results.
+
+---
+
+## 7. Disk-level and active-constraint findings
 
 `active_disk_quadratic_demand.csv` records, per active boundary block, the physical disk-level quadratic demand `sigma * (x1^2 + y1^2)`, the corresponding `z0`-only demand, the second-order supply, and the resulting supply/demand accounting.
 
 > **Ranking boundary (authoritative, from the result JSON).** Ranks use unweighted physical disk quadratic demand `sigma*(x1^2+y1^2)`, not absent KKT dual weights; they are kinematic stress ranks, not unique causal curvature allocations. Nothing in this section may be read as a KKT-weighted causal attribution — conic dual multipliers were never saved.
 
-### 6.1 The 90-degree cap is effectively low rank
+### 7.1 The 90-degree cap is effectively low rank
 
 Thirteen boundary blocks are active, but the unweighted demand is concentrated in a handful:
 
@@ -262,7 +423,7 @@ An effective participation count of `1.8067` against 13 active blocks is the qua
 
 Demand by ell at 90 degrees: `0` → `28714.95849561105`, `2` → `62.28548520077859`, `4` → `0.0002070587022949553`; the ell=0 share is `0.9978355921834331`.
 
-### 6.2 The 270-degree cone-apex side is broad but overwhelmingly ell=0
+### 7.2 The 270-degree cone-apex side is broad but overwhelmingly ell=0
 
 | Summary | Value |
 | --- | --- |
@@ -280,7 +441,7 @@ The apex side is the mirror image of the cap in structure. Far more blocks are a
 
 ---
 
-## 7. What is structurally explained versus what remains unexplained
+## 8. What is structurally explained versus what remains unexplained
 
 ### Explained
 
@@ -306,6 +467,11 @@ The reasoning behind the `PARTIALLY_EXPLAINED` label, in the words of the result
 - **Why not a numerical coincidence.** A coordinate-invariant disk/basis identity predicts the shared scale before using either fitted radius and reproduces the lower result to far below one percent; the upper residual is explicitly isolated.
 - **Why not fully structurally explained.** The common `47.3458` scale is exact for the frozen ell=0 sigma mode and explains the lower cap. The upper cap lands within 0.44 percent only after a large cross-ell cancellation. Saved artifacts contain no conic dual multipliers and the previously tested full complement map is infeasible, so no identity was found that forces that cancellation.
 
+The follow-up audits add two statements to this ledger:
+
+- **Geometrically explained.** The 90-degree correction lies in an exceptionally narrow near-zero-sum cross-ell cone, and the four-block ell=0 face demand varies along an exceptionally stable rank-1 mode.
+- **Mechanistically unexplained.** Neither a strict fixed cross-ell direction, the dominant `(0,29)-(0,24)` pair, nor the face PC1 score provides a drift explanation robust to the preregistered alternative response definitions. These negative results are why the classification remains `PARTIALLY_EXPLAINED`.
+
 ### Standing claim boundaries
 
 These are limits on interpretation, not open questions to be resolved by rereading the data:
@@ -315,17 +481,21 @@ These are limits on interpretation, not open questions to be resolved by rereadi
 3. **No mode importance from raw coefficients.** Use physical-amplitude-space or coordinate-invariant quantities. The `z0` group is the standing counterexample: dominant in raw norm, exactly zero in curvature.
 4. **No exact symmetry claim for the upper cap.** The 90-degree closeness to the common scale is measured, not proven to be forced.
 5. **No additional solves.** This analysis consumed 38 sealed solves and performed zero solver runs. Nothing in this document should be read as implying otherwise.
+6. **No further mechanism selection from the five saved scales.** Pair scans, exact permutations, cross-fitted PCA, and normalization audits have exhausted the preregistered read-only route. Selecting another block contrast or drift normalization from these same five points would reopen post-selection bias rather than resolve the mechanism.
 
 ---
 
-## 8. Reproducibility and file guide
+## 9. Reproducibility and file guide
 
 ### Verification record
+
+The original handoff records below verify the base projected-curvature package. The five follow-up analyses in Section 6 are separate sealed read-only packages with their own manifests; they are referenced here but are not silently added to the original 12-file handoff manifest.
 
 | Record | Result |
 | --- | --- |
 | Handoff verification | `PASS` — 12 included files, `source_solve_count=38`, `new_solver_runs=0`, no failures |
 | Underlying package verification | `PASS` — 11 manifest entries, `source_solve_count=38`, `new_solver_runs=0`, `failures=[]` |
+| Follow-up read-only packages | `PASS` — five staged analyses, each using the same 38 saved solves and `new_solver_runs=0` |
 | Source artifacts unchanged | `true` |
 
 Every file in this handoff is hash-listed in `HANDOFF_MANIFEST_SHA256.txt`, and every upstream artifact consumed by the analysis is hash-listed in `PROVENANCE_SHA256.json`. To confirm integrity:
@@ -342,7 +512,7 @@ The upstream package's own record is preserved verbatim in `MANIFEST_SHA256_SOUR
 | --- | --- |
 | `projected_curvature_result.json` | **Authoritative machine-readable result.** Fits, mode decomposition, cancellation fractions, demand summaries, classification, claim boundary. Where this README and the JSON appear to differ, the JSON governs. |
 | `mode_group_curvature_contributions.csv` | Additive `b1`, `b2`, signed-curvature, and physical-amplitude group diagnostics per axis (Section 4.3). |
-| `active_disk_quadratic_demand.csv` | Per-block disk-level demand, `z0`-only demand, second-order supply, supply/demand ratios, and the unweighted ranking (Section 6). 102 data rows: 13 for the 90-degree axis, 89 for the 270-degree axis. |
+| `active_disk_quadratic_demand.csv` | Per-block disk-level demand, `z0`-only demand, second-order supply, supply/demand ratios, and the unweighted ranking (Section 7). 102 data rows: 13 for the 90-degree axis, 89 for the 270-degree axis. |
 | `taylor_coefficients.csv` | Direct finite-offset Taylor coefficients and parametric radii at seven offsets per axis. Retains the numerical-resolution caveat of Section 4.2. |
 | `projected_curvature_decomposition.png` | Three-panel summary figure embedded in Section 1. |
 | `ANALYSIS_SCOPE.json` | Frozen scope, offsets, classification labels, prohibited operations, claim boundary. |
@@ -352,8 +522,8 @@ The upstream package's own record is preserved verbatim in `MANIFEST_SHA256_SOUR
 | `README_SOURCE.md` | Compact source narrative. Useful as background; **not** more authoritative than the JSON. |
 | `CLAUDE_REQUEST.md`, `FILE_GUIDE.md` | Writing request and reading order for this README. |
 
-The 38 individual solve JSON files and the analysis source code are intentionally omitted from this handoff. All README-relevant derived values are present in the included JSON and CSV artifacts.
+The 38 individual solve JSON files and the analysis source code are intentionally omitted from the original handoff. All README-relevant base values are present in its JSON and CSV artifacts; the later near-null and face-geometry values are governed by the separately manifested result files listed in Section 6.6.
 
 ---
 
-*All artifacts in this package are frozen and read-only. Numerical values in this document are reproduced from the saved results without modification.*
+*All numerical result artifacts referenced here are frozen and read-only. This README synthesizes the original package and the subsequent manifested audits without modifying their saved values.*
