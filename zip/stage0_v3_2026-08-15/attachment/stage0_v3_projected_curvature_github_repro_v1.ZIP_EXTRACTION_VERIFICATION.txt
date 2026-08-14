@@ -1,0 +1,13 @@
+ZIP EXTRACTION VERIFICATION: PASS
+zip_file=stage0_v3_projected_curvature_github_repro_v1.zip
+zip_bytes=250616
+zip_sha256=B76BE24099077B253F9B18B703BAB22CAC21E41C2F0DFD08E1CC98B550567D09
+independent_extraction_root=work/github_repro_zip_check_v1/stage0_v3_projected_curvature_github_repro_v1
+verifier_command=python -B verify_package.py
+tests=14/14
+manifest_entries=70
+source_solve_count=38
+new_solver_runs=0
+regenerated_numeric_artifacts_semantic_match=4/4
+regenerated_numeric_artifacts_exact_hash_match=4/4
+replayed_plot_pixel_exact=true
